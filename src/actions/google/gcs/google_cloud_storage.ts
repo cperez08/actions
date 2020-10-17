@@ -65,7 +65,7 @@ export class GoogleCloudStorageAction extends Hub.Action {
       })
       return new Hub.ActionResponse({ success: true })
     } catch (e) {
-      return new Hub.ActionResponse({success: false, message: e.message})
+      return new Hub.ActionResponse({ success: false, message: e.message })
     }
 
   }
@@ -99,8 +99,8 @@ export class GoogleCloudStorageAction extends Hub.Action {
       name: "bucket",
       required: true,
       options: buckets.map((b: any) => {
-          return {name: b.id, label: b.name}
-        }),
+        return { name: b.id, label: b.name }
+      }),
       type: "select",
       default: buckets[0].id,
     }, {
@@ -110,7 +110,7 @@ export class GoogleCloudStorageAction extends Hub.Action {
     }, {
       label: "Overwrite",
       name: "overwrite",
-      options: [{label: "Yes", name: "yes"}, {label: "No", name: "no"}],
+      options: [{ label: "Yes", name: "yes" }, { label: "No", name: "no" }],
       default: "yes",
       description: "If Overwrite is enabled, will use the title or filename and overwrite existing data." +
         " If disabled, a date time will be appended to the name to make the file unique.",

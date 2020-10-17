@@ -30,6 +30,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@google-cloud/automl": "^2.2.0",
     "@google-cloud/storage": "^1.5.2",
     "@hubspot/api-client": "^2.0.1",
     "@sendgrid/helpers": "^6.1.5",
