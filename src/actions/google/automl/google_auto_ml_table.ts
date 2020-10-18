@@ -3,12 +3,12 @@ import * as Hub from "../../../hub"
 import { AutoMlClient } from '@google-cloud/automl'
 import { GoogleCloudStorageAction } from "../gcs/google_cloud_storage"
 
-export class GoogleAutomlDataSet extends Hub.Action {
+export class GoogleAutomlTable extends Hub.Action {
 
-    name = "google_automl"
-    label = "Google Cloud AutomML"
+    name = "google_automl_table"
+    label = "Google Cloud AutomML Table"
     iconName = "google/automl/google_automl.png"
-    description = "Import your data into a Google AutoML"
+    description = "Import your data into a Google AutoMl Table"
     supportedActionTypes = [Hub.ActionType.Dashboard, Hub.ActionType.Query]
     usesStreaming = true
     requiredFields = []
@@ -45,8 +45,9 @@ export class GoogleAutomlDataSet extends Hub.Action {
     async execute(request: Hub.ActionRequest) {
 
         try {
+
             if (!request.params.project_id || !request.params.region || !request.formParams.dataset_id) {
-                return new Hub.ActionResponse({ success: false, message: "project_id region and dataset are mandatory" })
+                return new Hub.ActionResponse({ success: false, message: "project_id, region and dataset are mandatory" })
             }
 
             await this.pushFileToGoogleBucket(request)
@@ -66,7 +67,7 @@ export class GoogleAutomlDataSet extends Hub.Action {
             operation.promise();
             return new Hub.ActionResponse({ success: true })
         } catch (e) {
-            return new Hub.ActionResponse({ success: false, message: e.message })
+            return new Hub.ActionResponse({ success: false, message: (e.message) ? e.message : e })
         }
     }
 
@@ -154,7 +155,7 @@ export class GoogleAutomlDataSet extends Hub.Action {
     private async getDatasetList(request: Hub.ActionRequest) {
 
         if (!request.params.project_id || !request.params.region) {
-            throw Error('project id and region are required')
+            throw new Error('project id and region are required')
         }
 
         const client = this.getAutomlInstance(request)
@@ -165,7 +166,7 @@ export class GoogleAutomlDataSet extends Hub.Action {
         const [results] = await client.listDatasets(list_request)
 
         if (!results) {
-            throw Error('no datasets found in this account')
+            throw new Error('no datasets found in this account')
         }
 
         return results.map((b: any) => {
@@ -174,4 +175,4 @@ export class GoogleAutomlDataSet extends Hub.Action {
     }
 }
 
-Hub.addAction(new GoogleAutomlDataSet())
+Hub.addAction(new GoogleAutomlTable())
