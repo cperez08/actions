@@ -173,7 +173,7 @@ export class GoogleAutomlDataSet extends Hub.Action {
         }
 
         return results.map((b: any) => {
-            return { name: b.displayName, label: b.name }
+            return { name: b.name, label: b.displayName }
         })
     }
 }
