@@ -52,10 +52,10 @@ export class GoogleAutomlDataSet extends Hub.Action {
             await this.pushFileToGoogleBucket(request)
             const client = this.getAutomlInstance(request)
             const bucket_location = `gs://${request.params.project_id}/${request.formParams.filename}`
-            const dataset_name = client.datasetPath(request.params.project_id, request.params.region, request.formParams.dataset_id)
+            // const dataset_name = client.datasetPath(request.params.project_id, request.params.region, request.formParams.dataset_id)
 
             const ml_request = {
-                name: dataset_name,
+                name: request.formParams.dataset_id,
                 inputConfig: {
                     gcsSource: {
                         inputUris: [bucket_location],
@@ -70,6 +70,7 @@ export class GoogleAutomlDataSet extends Hub.Action {
             return new Hub.ActionResponse({ success: true })
 
         } catch (e) {
+            console.log(`error importing dataset: ${e}`)
             return new Hub.ActionResponse({ success: false, message: e.message })
         }
     }
