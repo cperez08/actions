@@ -49,10 +49,7 @@ export class GoogleAutomlDataSet extends Hub.Action {
                 return new Hub.ActionResponse({ success: false, message: "project_id region and dataset are mandatory" })
             }
 
-            console.time("push_file_gcs");
             await this.pushFileToGoogleBucket(request)
-            console.timeEnd("push_file_gcs");
-
             const client = this.getAutomlInstance(request)
             const bucket_location = `gs://${request.formParams.bucket}/${request.formParams.filename}`
 
@@ -65,15 +62,10 @@ export class GoogleAutomlDataSet extends Hub.Action {
                 },
             };
 
-
-            console.time("import_data_automl");
             const [operation] = await client.importData(ml_request);
-            console.timeEnd("import_data_automl");
             operation.promise();
             return new Hub.ActionResponse({ success: true })
-
         } catch (e) {
-            console.log(`error importing dataset: ${e}`)
             return new Hub.ActionResponse({ success: false, message: e.message })
         }
     }
