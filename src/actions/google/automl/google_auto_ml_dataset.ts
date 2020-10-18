@@ -51,8 +51,7 @@ export class GoogleAutomlDataSet extends Hub.Action {
 
             await this.pushFileToGoogleBucket(request)
             const client = this.getAutomlInstance(request)
-            const bucket_location = `gs://${request.params.project_id}/${request.formParams.filename}`
-            // const dataset_name = client.datasetPath(request.params.project_id, request.params.region, request.formParams.dataset_id)
+            const bucket_location = `gs://${request.formParams.bucket}/${request.formParams.filename}`
 
             const ml_request = {
                 name: request.formParams.dataset_id,
