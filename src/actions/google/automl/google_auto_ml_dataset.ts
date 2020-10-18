@@ -69,11 +69,7 @@ export class GoogleAutomlDataSet extends Hub.Action {
             console.time("import_data_automl");
             const [operation] = await client.importData(ml_request);
             console.timeEnd("import_data_automl");
-            console.time("promise_data_automl");
-            const [response] = await operation.promise();
-            console.timeEnd("promise_data_automl");
-
-            console.log(`Dataset imported: ${response}`);
+            operation.promise();
             return new Hub.ActionResponse({ success: true })
 
         } catch (e) {
