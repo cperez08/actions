@@ -3,7 +3,6 @@ import * as Hub from "../../../hub"
 import { AutoMlClient } from '@google-cloud/automl'
 import { GoogleCloudStorageAction } from "../gcs/google_cloud_storage"
 
-
 export class GoogleAutomlDataSet extends Hub.Action {
 
     name = "google_automl"
@@ -33,22 +32,30 @@ export class GoogleAutomlDataSet extends Hub.Action {
             sensitive: false,
             description: "The Project Id for your GCS project from https://console.cloud.google.com/apis/credentials",
         },
+        {
+            name: "region",
+            label: "Region",
+            required: true,
+            sensitive: false,
+            description: "the region will be used to manage the datasets (us-central1)",
+        },
+
     ]
 
     async execute(request: Hub.ActionRequest) {
 
         try {
-
-            if (!request.params.project_id || !request.formParams.reqion || !request.formParams.dataset_id) {
+            if (!request.params.project_id || !request.params.region || !request.formParams.dataset_id) {
                 return new Hub.ActionResponse({ success: false, message: "project_id region and dataset are mandatory" })
             }
 
             await this.pushFileToGoogleBucket(request)
             const client = this.getAutomlInstance(request)
-            const bucket_location = `gs://${request.params.project_id}/${request.params.file_name}`
+            const bucket_location = `gs://${request.params.project_id}/${request.formParams.filename}`
+            const dataset_name = client.datasetPath(request.params.project_id, request.params.region, request.formParams.dataset_id)
 
             const ml_request = {
-                name: client.datasetPath(request.params.project_id, request.formParams.reqion, request.formParams.dataset_id),
+                name: dataset_name,
                 inputConfig: {
                     gcsSource: {
                         inputUris: [bucket_location],
@@ -57,8 +64,9 @@ export class GoogleAutomlDataSet extends Hub.Action {
             };
 
             const [operation] = await client.importData(ml_request);
-            // Wait for operation to complete.
-            await operation.promise();
+            const [response] = await operation.promise();
+
+            console.log(`Dataset imported: ${response}`);
             return new Hub.ActionResponse({ success: true })
 
         } catch (e) {
@@ -67,23 +75,21 @@ export class GoogleAutomlDataSet extends Hub.Action {
     }
 
     async form(request: Hub.ActionRequest) {
+
         const form = new Hub.ActionForm()
 
         try {
-
+            const datasets = await this.getDatasetList(request)
             form.fields = [
                 {
                     name: "dataset_id",
-                    label: "Dataset Id",
+                    label: "Dataset",
                     required: true,
-                    description: "The name of the new dataset (display name)",
+                    options: datasets,
+                    type: "select",
+                    default: datasets[0].name,
                 }, {
-                    name: "region",
-                    label: "Region",
-                    required: true,
-                    description: "Region where the data set will be created",
-                }, {
-                    name: "file_name",
+                    name: "filename",
                     label: "File Name",
                     required: true,
                     description: "the name of the file that will be created in the Google storage",
@@ -102,13 +108,14 @@ export class GoogleAutomlDataSet extends Hub.Action {
             form.fields.push(<Hub.ActionFormField>buckets)
 
         } catch (e) {
-            form.error = e.message
-            return form
+            form.error = `error populating form fields: ${e}`
         }
+
         return form
     }
 
     private getAutomlInstance(request: Hub.ActionRequest) {
+
         const credentials = {
             client_email: request.params.client_email,
             private_key: request.params.private_key!.replace(/\\n/gm, "\n"),
@@ -123,6 +130,7 @@ export class GoogleAutomlDataSet extends Hub.Action {
     }
 
     private async pushFileToGoogleBucket(request: Hub.ActionRequest) {
+
         try {
             const storage_action = new GoogleCloudStorageAction()
             await storage_action.validateAndExecute(request)
@@ -132,19 +140,41 @@ export class GoogleAutomlDataSet extends Hub.Action {
     }
 
     private async getBucketList(request: Hub.ActionRequest) {
+
         try {
             const storage_action = new GoogleCloudStorageAction()
             const form = await storage_action.validateAndFetchForm(request)
-            if (form.error != "") {
+
+            if (form.error) {
                 throw form.error
             }
 
             return form.fields.find(field => field.name == "bucket")
-
         } catch (e) {
-
             throw e
         }
+    }
+
+    private async getDatasetList(request: Hub.ActionRequest) {
+
+        if (!request.params.project_id || !request.params.region) {
+            throw Error('project id and region are required')
+        }
+
+        const client = this.getAutomlInstance(request)
+        const list_request = {
+            parent: client.locationPath(request.params.project_id, request.params.region),
+        };
+
+        const [results] = await client.listDatasets(list_request)
+
+        if (!results) {
+            throw Error('no datasets found in this account')
+        }
+
+        return results.map((b: any) => {
+            return { name: b.displayName, label: b.name }
+        })
     }
 }
 
