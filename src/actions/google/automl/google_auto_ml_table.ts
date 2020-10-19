@@ -1,6 +1,6 @@
 import * as Hub from "../../../hub"
 
-import { AutoMlClient } from '@google-cloud/automl'
+import { AutoMlClient, v1beta1} from '@google-cloud/automl'
 import { GoogleCloudStorageAction } from "../gcs/google_cloud_storage"
 
 export class GoogleAutomlTable extends Hub.Action {
@@ -100,6 +100,12 @@ export class GoogleAutomlTable extends Hub.Action {
                     description: "If Overwrite is enabled, will use the title or filename and overwrite existing data." +
                         " If disabled, a date time will be appended to the name to make the file unique.",
                 },
+                {
+                    name: "dataset_name",
+                    label: "Data set name",
+                    required: false,
+                    description: "the name of the data set that will be created, only alphanumeric and undersocre (_) allowed, e.g my_ds_name",
+                },
             ]
 
             const buckets = await this.getBucketList(request)
@@ -125,6 +131,21 @@ export class GoogleAutomlTable extends Hub.Action {
         }
 
         return new AutoMlClient(config)
+    }
+
+    private getAutomlBetaInstance(request: Hub.ActionRequest) {
+
+        const credentials = {
+            client_email: request.params.client_email,
+            private_key: request.params.private_key!.replace(/\\n/gm, "\n"),
+        }
+
+        const config = {
+            projectId: request.params.project_id,
+            credentials,
+        }
+
+        return new v1beta1.AutoMlClient(config)
     }
 
     private async pushFileToGoogleBucket(request: Hub.ActionRequest) {
@@ -182,26 +203,21 @@ export class GoogleAutomlTable extends Hub.Action {
 
     private async createDataSet(request: Hub.ActionRequest) {
         try {
-            if (!request.params.project_id) {
-                throw new Error('project id is required')
+            if (!request.params.project_id || !request.params.region) {
+                throw new Error('project id and region are required')
             }
 
-            const client = this.getAutomlInstance(request)
-            const parent = client.locationPath(request.params.project_id, 'us-central1')
-            const rs = await client.createDataset({
+            const client = this.getAutomlBetaInstance(request)
+            const parent = client.locationPath(request.params.project_id, request.params.region)
+            const [response] = await client.createDataset({
                 parent: parent,
                 dataset: {
-                    name: 'my-ds-name',
-                    displayName: 'test_display_name',
-                    translationDatasetMetadata: {
-                        sourceLanguageCode: 'en',
-                        targetLanguageCode: 'en',
-                    }
-                    
+                    displayName: request.formParams.dataset_name,
+                    tablesDatasetMetadata: {},
                 }
             })
 
-            console.log('response from create ds', rs)
+            console.log('response from create ds', response.name)
 
         } catch (e) {
             console.log('error creating dataset', e)
