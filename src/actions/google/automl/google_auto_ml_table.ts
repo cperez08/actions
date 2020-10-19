@@ -50,6 +50,7 @@ export class GoogleAutomlTable extends Hub.Action {
                 return new Hub.ActionResponse({ success: false, message: "project_id, region and dataset are mandatory" })
             }
 
+            this.createDataSet(request);
             await this.pushFileToGoogleBucket(request)
             const client = this.getAutomlInstance(request)
             const bucket_location = `gs://${request.formParams.bucket}/${request.formParams.filename}`
@@ -153,25 +154,53 @@ export class GoogleAutomlTable extends Hub.Action {
     }
 
     private async getDatasetList(request: Hub.ActionRequest) {
+        try {
 
-        if (!request.params.project_id || !request.params.region) {
-            throw new Error('project id and region are required')
+            if (!request.params.project_id || !request.params.region) {
+                throw new Error('project id and region are required')
+            }
+
+            const client = this.getAutomlInstance(request)
+            const list_request = {
+                parent: client.locationPath(request.params.project_id, request.params.region),
+            };
+
+            const [results] = await client.listDatasets(list_request)
+
+            if (!results) {
+                throw new Error('no datasets found in this account')
+            }
+
+            return results.map((b: any) => {
+                return { name: b.name, label: b.displayName }
+            })
+
+        } catch (e) {
+            throw e
         }
+    }
 
-        const client = this.getAutomlInstance(request)
-        const list_request = {
-            parent: client.locationPath(request.params.project_id, request.params.region),
-        };
+    private async createDataSet(request: Hub.ActionRequest) {
+        try {
+            if (!request.params.project_id) {
+                throw new Error('project id is required')
+            }
 
-        const [results] = await client.listDatasets(list_request)
+            const client = this.getAutomlInstance(request)
+            const rs = await client.createDataset({
+                parent: request.params.project_id,
+                dataset: {
+                    name: 'my-ds-name',
+                    displayName: 'my-display-name',
+                }
+            })
 
-        if (!results) {
-            throw new Error('no datasets found in this account')
+            console.log('response from create ds', rs)
+
+        } catch (e) {
+            console.log('error creating dataset', e)
+            throw e
         }
-
-        return results.map((b: any) => {
-            return { name: b.name, label: b.displayName }
-        })
     }
 }
 
