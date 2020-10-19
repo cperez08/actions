@@ -187,11 +187,17 @@ export class GoogleAutomlTable extends Hub.Action {
             }
 
             const client = this.getAutomlInstance(request)
+            const parent = client.locationPath(request.params.project_id, 'us-central1')
             const rs = await client.createDataset({
-                parent: request.params.project_id,
+                parent: parent,
                 dataset: {
                     name: 'my-ds-name',
-                    displayName: 'my-display-name',
+                    displayName: 'test_display_name',
+                    translationDatasetMetadata: {
+                        sourceLanguageCode: 'en',
+                        targetLanguageCode: 'en',
+                    }
+                    
                 }
             })
 
