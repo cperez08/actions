@@ -3,6 +3,8 @@ import * as Hub from "../../../hub"
 import { AutoMlClient, v1beta1} from '@google-cloud/automl'
 import { GoogleCloudStorageAction } from "../gcs/google_cloud_storage"
 
+const new_ds = "create_new_dataset"
+
 export class GoogleAutomlTable extends Hub.Action {
 
     name = "google_automl_table"
@@ -42,6 +44,7 @@ export class GoogleAutomlTable extends Hub.Action {
 
     ]
 
+    // TODO: add logs for better traceability
     async execute(request: Hub.ActionRequest) {
 
         try {
@@ -50,13 +53,18 @@ export class GoogleAutomlTable extends Hub.Action {
                 return new Hub.ActionResponse({ success: false, message: "project_id, region and dataset are mandatory" })
             }
 
-            this.createDataSet(request);
+            
             await this.pushFileToGoogleBucket(request)
             const client = this.getAutomlInstance(request)
             const bucket_location = `gs://${request.formParams.bucket}/${request.formParams.filename}`
+            let dataset_id = request.formParams.dataset_id
+
+            if (dataset_id === new_ds) {
+                dataset_id = <string>await this.createDataSet(request)
+            }
 
             const ml_request = {
-                name: request.formParams.dataset_id,
+                name: dataset_id,
                 inputConfig: {
                     gcsSource: {
                         inputUris: [bucket_location],
@@ -78,6 +86,7 @@ export class GoogleAutomlTable extends Hub.Action {
 
         try {
             const datasets = await this.getDatasetList(request)
+            datasets.push({ name: new_ds, label: "create a new dataset" })
             form.fields = [
                 {
                     name: "dataset_id",
@@ -85,7 +94,7 @@ export class GoogleAutomlTable extends Hub.Action {
                     required: true,
                     options: datasets,
                     type: "select",
-                    default: datasets[0].name,
+                    default: new_ds,
                 }, {
                     name: "filename",
                     label: "File Name",
@@ -102,9 +111,9 @@ export class GoogleAutomlTable extends Hub.Action {
                 },
                 {
                     name: "dataset_name",
-                    label: "Data set name",
+                    label: "Dataset name",
                     required: false,
-                    description: "the name of the data set that will be created, only alphanumeric and undersocre (_) allowed, e.g my_ds_name",
+                    description: "(no fully working yet) the name of the data set that will be created, only alphanumeric and undersocre (_) allowed, e.g my_ds_name",
                 },
             ]
 
@@ -217,8 +226,7 @@ export class GoogleAutomlTable extends Hub.Action {
                 }
             })
 
-            console.log('response from create ds', response.name)
-
+            return response.name
         } catch (e) {
             console.log('error creating dataset', e)
             throw e
