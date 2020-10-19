@@ -44,7 +44,7 @@ export class GoogleAutomlTable extends Hub.Action {
 
     ]
 
-    // TODO: add logs for better traceability
+    // TODO: add logs for better traceability and regex validations
     async execute(request: Hub.ActionRequest) {
 
         try {
@@ -113,7 +113,7 @@ export class GoogleAutomlTable extends Hub.Action {
                     name: "dataset_name",
                     label: "Dataset name",
                     required: false,
-                    description: "(no fully working yet) the name of the data set that will be created, only alphanumeric and undersocre (_) allowed, e.g my_ds_name",
+                    description: "This is the name of the dataset that will be created, only alphanumeric and undersocre (_) allowed, e.g my_ds_name",
                 },
             ]
 
