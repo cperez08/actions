@@ -79,9 +79,9 @@ describe(`${action.constructor.name} unit tests`, () => {
                             name: "dataset_id",
                             label: "Dataset",
                             required: true,
-                            options: [{ name: "ds", label: "ds" }],
+                            options: [{ name: "ds", label: "ds" }, { name: "create_new_dataset", label: "create a new dataset" }],
                             type: "select",
-                            default: "ds",
+                            default: "create_new_dataset",
                         },
                         {
                             name: "filename",
@@ -91,11 +91,18 @@ describe(`${action.constructor.name} unit tests`, () => {
                         },
                         {
                             name: "overwrite",
-                            label: "Overwrite",
+                            label: "Overwrite File",
                             options: [{ label: "Yes", name: "yes" }, { label: "No", name: "no" }],
                             default: "yes",
+                            type: "select",
                             description: "If Overwrite is enabled, will use the title or filename and overwrite existing data." +
                                 " If disabled, a date time will be appended to the name to make the file unique.",
+                        },
+                        {
+                            name: "dataset_name",
+                            label: "Dataset name",
+                            required: false,
+                            description: "This is the name of the dataset that will be created, only alphanumeric and undersocre (_) allowed, e.g my_ds_name",
                         }
                     ]
                 })
@@ -140,9 +147,9 @@ describe(`${action.constructor.name} unit tests`, () => {
                             name: "dataset_id",
                             label: "Dataset",
                             required: true,
-                            options: [{ name: "ds", label: "ds" }],
+                            options: [{ name: "ds", label: "ds" }, { name: "create_new_dataset", label: "create a new dataset" }],
                             type: "select",
-                            default: "ds",
+                            default: "create_new_dataset",
                         },
                         {
                             name: "filename",
@@ -152,11 +159,18 @@ describe(`${action.constructor.name} unit tests`, () => {
                         },
                         {
                             name: "overwrite",
-                            label: "Overwrite",
+                            label: "Overwrite File",
                             options: [{ label: "Yes", name: "yes" }, { label: "No", name: "no" }],
                             default: "yes",
+                            type: "select",
                             description: "If Overwrite is enabled, will use the title or filename and overwrite existing data." +
                                 " If disabled, a date time will be appended to the name to make the file unique.",
+                        },
+                        {
+                            name: "dataset_name",
+                            label: "Dataset name",
+                            required: false,
+                            description: "This is the name of the dataset that will be created, only alphanumeric and undersocre (_) allowed, e.g my_ds_name",
                         },
                         {
                             label: "Bucket",
@@ -271,6 +285,99 @@ describe(`${action.constructor.name} unit tests`, () => {
                 .and.notify(stubClient.restore)
         })
 
+        it("error creating dataset", () => {
+            const request = new Hub.ActionRequest()
+            request.type = Hub.ActionType.Dashboard
+            request.params = {
+                client_email: "foo",
+                private_key: "foo",
+                project_id: "foo",
+                region: "foo",
+            }
+            request.formParams = {
+                filename: "filename",
+                overwrite: "yes",
+                dataset_id: "create_new_dataset",
+                dataset_name: "test",
+            }
+            request.attachment = {}
+            request.attachment.dataBuffer = Buffer.from("1,2,3,4", "utf8")
+
+            const stubGCSAction = sinon.stub(GoogleCloudStorageAction.prototype, "validateAndExecute")
+                .resolves("pushed file to gcss")
+
+            const stubClient = sinon.stub(action as any, "getAutomlInstance")
+                .callsFake(() => ({
+                    importData: async () => Promise.resolve([{ promise: () => { } }]),
+                }))
+
+            const stubBetaClient = sinon.stub(action as any, "getAutomlBetaInstance")
+                .callsFake(() => ({
+                    createDataset: async () => Promise.reject(new Error("error creating DS")),
+                    locationPath: () => "parent_id",
+
+                }))
+
+            const response = action.validateAndExecute(request)
+            return chai.expect(response).to.eventually
+                .deep.equal(
+                    {
+                        success: false,
+                        message: "error creating DS",
+                        refreshQuery: false,
+                        validationErrors: []
+                    })
+                .and.notify(stubGCSAction.restore)
+                .and.notify(stubBetaClient.restore)
+                .and.notify(stubClient.restore)
+        })
+
+        it("execution ok with new Dataset", () => {
+            const request = new Hub.ActionRequest()
+            request.type = Hub.ActionType.Dashboard
+            request.params = {
+                client_email: "foo",
+                private_key: "foo",
+                project_id: "foo",
+                region: "foo",
+            }
+            request.formParams = {
+                filename: "filename",
+                overwrite: "yes",
+                dataset_id: "create_new_dataset",
+                dataset_name: "test",
+            }
+            request.attachment = {}
+            request.attachment.dataBuffer = Buffer.from("1,2,3,4", "utf8")
+
+            const stubGCSAction = sinon.stub(GoogleCloudStorageAction.prototype, "validateAndExecute")
+                .resolves("pushed file to gcss")
+
+            const stubClient = sinon.stub(action as any, "getAutomlInstance")
+                .callsFake(() => ({
+                    importData: async () => Promise.resolve([{ promise: () => { } }]),
+                }))
+
+            const stubBetaClient = sinon.stub(action as any, "getAutomlBetaInstance")
+                .callsFake(() => ({
+                    createDataset: async () => Promise.resolve([{ name: 'new_ds_name'}]),
+                    locationPath: () => "parent_id",
+
+                }))
+
+            const response = action.validateAndExecute(request)
+            return chai.expect(response).to.eventually
+                .deep.equal(
+                    {
+                        success: true,
+                        refreshQuery: false,
+                        validationErrors: []
+                    })
+                .and.notify(stubGCSAction.restore)
+                .and.notify(stubBetaClient.restore)
+                .and.notify(stubClient.restore)
+        })
+
         it("excecution ok", () => {
             const request = new Hub.ActionRequest()
             request.type = Hub.ActionType.Dashboard
@@ -289,7 +396,7 @@ describe(`${action.constructor.name} unit tests`, () => {
             request.attachment.dataBuffer = Buffer.from("1,2,3,4", "utf8")
 
             const stubGCSAction = sinon.stub(GoogleCloudStorageAction.prototype, "validateAndExecute")
-                .resolves(new Error("pushed file to gcss"))
+                .resolves("pushed file to gcss")
 
             const stubClient = sinon.stub(action as any, "getAutomlInstance")
                 .callsFake(() => ({

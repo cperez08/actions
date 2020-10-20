@@ -2,6 +2,7 @@ import * as Hub from "../../../hub"
 
 import { AutoMlClient, v1beta1} from '@google-cloud/automl'
 import { GoogleCloudStorageAction } from "../gcs/google_cloud_storage"
+import {log} from 'console'
 
 const new_ds = "create_new_dataset"
 
@@ -44,7 +45,6 @@ export class GoogleAutomlTable extends Hub.Action {
 
     ]
 
-    // TODO: add logs for better traceability and regex validations
     async execute(request: Hub.ActionRequest) {
 
         try {
@@ -103,8 +103,9 @@ export class GoogleAutomlTable extends Hub.Action {
                 },
                 {
                     name: "overwrite",
-                    label: "Overwrite",
+                    label: "Overwrite File",
                     options: [{ label: "Yes", name: "yes" }, { label: "No", name: "no" }],
+                    type: "select",
                     default: "yes",
                     description: "If Overwrite is enabled, will use the title or filename and overwrite existing data." +
                         " If disabled, a date time will be appended to the name to make the file unique.",
@@ -163,6 +164,7 @@ export class GoogleAutomlTable extends Hub.Action {
             const storage_action = new GoogleCloudStorageAction()
             await storage_action.validateAndExecute(request)
         } catch (e) {
+            log(`error pushing file to Google Bucket ${e}`)
             throw e
         }
     }
@@ -179,6 +181,7 @@ export class GoogleAutomlTable extends Hub.Action {
 
             return form.fields.find(field => field.name == "bucket")
         } catch (e) {
+            log(`error getting Google Bucket list ${e}`)
             throw e
         }
     }
@@ -206,6 +209,7 @@ export class GoogleAutomlTable extends Hub.Action {
             })
 
         } catch (e) {
+            log(`error fetching the dataset list ${e}`)
             throw e
         }
     }
@@ -228,7 +232,7 @@ export class GoogleAutomlTable extends Hub.Action {
 
             return response.name
         } catch (e) {
-            console.log('error creating dataset', e)
+            log(`error creating dataset ${e}`)
             throw e
         }
     }

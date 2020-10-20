@@ -19,3 +19,4 @@ Considerations:
 - The Bucket and the Google AutoMl Dataset must be compatible:
   - The Bucket and the Google AutoML region should be the same, is not allowed to connect a Bucket with a Dataset in different locations or region type.
 - Make sure the service account you use for AutoMl action also has permissions over Google Cloud Storage.
+- The import of the data is done in a asyn way, so whatever error is thrown by google won't be reflected in the action result but in the Google import result.
