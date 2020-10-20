@@ -54,8 +54,13 @@ export class GoogleAutomlTable extends Hub.Action {
             if (!request.params.project_id || !request.params.region || !request.formParams.dataset_id) {
                 return new Hub.ActionResponse({ success: false, message: "project_id, region and dataset are mandatory" })
             }
+            
+            const params_error = this.validateFormParam(request)
+            if (params_error) {
+                log(`error validating parameters: ${params_error}`)
+                throw params_error.message
+            }
 
-            this.validateFormParam(request)
             await this.pushFileToGoogleBucket(request)
             const client = this.getAutomlInstance(request)
             const bucket_location = `gs://${request.formParams.bucket}/${request.formParams.filename}`
@@ -242,11 +247,11 @@ export class GoogleAutomlTable extends Hub.Action {
     private validateFormParam(request: Hub.ActionRequest) {
 
         if (request.formParams.dataset_name && request.formParams.dataset_name !== "" && request.formParams.dataset_name.search(dataset_name_regex) === -1) {
-            throw new Error('invalid dataset name: use only alphanumeric and underscores')
+            return new Error('invalid dataset name: use only alphanumeric and underscores')
         }
 
         if (request.formParams.filename && request.formParams.filename !== "" && request.formParams.filename.search(file_name_regex) === -1) {
-            throw new Error('invalid file name: use alphanumeric, underscore and file extension of 3 characteres')
+            return new Error('invalid file name: use alphanumeric, underscore and file extension of 3 characteres')
         }
     }
 }
