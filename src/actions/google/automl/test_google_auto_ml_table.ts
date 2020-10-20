@@ -225,7 +225,7 @@ describe(`${action.constructor.name} unit tests`, () => {
                 region: "foo",
             }
             request.formParams = {
-                filename: "filename",
+                filename: "filename.csv",
                 overwrite: "yes",
                 dataset_id: "ds",
             }
@@ -257,7 +257,7 @@ describe(`${action.constructor.name} unit tests`, () => {
                 region: "foo",
             }
             request.formParams = {
-                filename: "filename",
+                filename: "filename.csv",
                 overwrite: "yes",
                 dataset_id: "ds",
             }
@@ -295,7 +295,7 @@ describe(`${action.constructor.name} unit tests`, () => {
                 region: "foo",
             }
             request.formParams = {
-                filename: "filename",
+                filename: "filename.csv",
                 overwrite: "yes",
                 dataset_id: "create_new_dataset",
                 dataset_name: "test",
@@ -332,6 +332,100 @@ describe(`${action.constructor.name} unit tests`, () => {
                 .and.notify(stubClient.restore)
         })
 
+        it("failed with new Dataset because of filename", () => {
+            const request = new Hub.ActionRequest()
+            request.type = Hub.ActionType.Dashboard
+            request.params = {
+                client_email: "foo",
+                private_key: "foo",
+                project_id: "foo",
+                region: "foo",
+            }
+            request.formParams = {
+                filename: "invalid file name",
+                overwrite: "yes",
+                dataset_id: "create_new_dataset",
+                dataset_name: "test",
+            }
+            request.attachment = {}
+            request.attachment.dataBuffer = Buffer.from("1,2,3,4", "utf8")
+
+            const stubGCSAction = sinon.stub(GoogleCloudStorageAction.prototype, "validateAndExecute")
+                .resolves("pushed file to gcss")
+
+            const stubClient = sinon.stub(action as any, "getAutomlInstance")
+                .callsFake(() => ({
+                    importData: async () => Promise.resolve([{ promise: () => { } }]),
+                }))
+
+            const stubBetaClient = sinon.stub(action as any, "getAutomlBetaInstance")
+                .callsFake(() => ({
+                    createDataset: async () => Promise.resolve([{ name: 'new_ds_name'}]),
+                    locationPath: () => "parent_id",
+
+                }))
+
+            const response = action.validateAndExecute(request)
+            return chai.expect(response).to.eventually
+                .deep.equal(
+                    {   
+                        message: "invalid file name: use alphanumeric, underscore and file extension of 3 characteres",
+                        success: false,
+                        refreshQuery: false,
+                        validationErrors: []
+                    })
+                .and.notify(stubGCSAction.restore)
+                .and.notify(stubBetaClient.restore)
+                .and.notify(stubClient.restore)
+        })
+
+        it("failed with new Dataset because of dataset name", () => {
+            const request = new Hub.ActionRequest()
+            request.type = Hub.ActionType.Dashboard
+            request.params = {
+                client_email: "foo",
+                private_key: "foo",
+                project_id: "foo",
+                region: "foo",
+            }
+            request.formParams = {
+                filename: "valid.csv",
+                overwrite: "yes",
+                dataset_id: "create_new_dataset",
+                dataset_name: "data set test",
+            }
+            request.attachment = {}
+            request.attachment.dataBuffer = Buffer.from("1,2,3,4", "utf8")
+
+            const stubGCSAction = sinon.stub(GoogleCloudStorageAction.prototype, "validateAndExecute")
+                .resolves("pushed file to gcss")
+
+            const stubClient = sinon.stub(action as any, "getAutomlInstance")
+                .callsFake(() => ({
+                    importData: async () => Promise.resolve([{ promise: () => { } }]),
+                }))
+
+            const stubBetaClient = sinon.stub(action as any, "getAutomlBetaInstance")
+                .callsFake(() => ({
+                    createDataset: async () => Promise.resolve([{ name: 'new_ds_name'}]),
+                    locationPath: () => "parent_id",
+
+                }))
+
+            const response = action.validateAndExecute(request)
+            return chai.expect(response).to.eventually
+                .deep.equal(
+                    {   
+                        message: "invalid dataset name: use only alphanumeric and underscores",
+                        success: false,
+                        refreshQuery: false,
+                        validationErrors: []
+                    })
+                .and.notify(stubGCSAction.restore)
+                .and.notify(stubBetaClient.restore)
+                .and.notify(stubClient.restore)
+        })
+
         it("execution ok with new Dataset", () => {
             const request = new Hub.ActionRequest()
             request.type = Hub.ActionType.Dashboard
@@ -342,10 +436,10 @@ describe(`${action.constructor.name} unit tests`, () => {
                 region: "foo",
             }
             request.formParams = {
-                filename: "filename",
+                filename: "filename.csv",
                 overwrite: "yes",
                 dataset_id: "create_new_dataset",
-                dataset_name: "test",
+                dataset_name: "test_valid_name",
             }
             request.attachment = {}
             request.attachment.dataBuffer = Buffer.from("1,2,3,4", "utf8")
@@ -388,7 +482,7 @@ describe(`${action.constructor.name} unit tests`, () => {
                 region: "foo",
             }
             request.formParams = {
-                filename: "filename",
+                filename: "filename.csv",
                 overwrite: "yes",
                 dataset_id: "ds",
             }

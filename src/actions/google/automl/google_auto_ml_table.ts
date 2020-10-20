@@ -1,10 +1,12 @@
 import * as Hub from "../../../hub"
 
-import { AutoMlClient, v1beta1} from '@google-cloud/automl'
+import { AutoMlClient, v1beta1 } from '@google-cloud/automl'
 import { GoogleCloudStorageAction } from "../gcs/google_cloud_storage"
-import {log} from 'console'
+import { log } from 'console'
 
 const new_ds = "create_new_dataset"
+const dataset_name_regex = /^[a-zA-Z0-9_]+$/;
+const file_name_regex = /^[\w,\s-]+\.[A-Za-z]{3}$/;
 
 export class GoogleAutomlTable extends Hub.Action {
 
@@ -53,7 +55,7 @@ export class GoogleAutomlTable extends Hub.Action {
                 return new Hub.ActionResponse({ success: false, message: "project_id, region and dataset are mandatory" })
             }
 
-            
+            this.validateFormParam(request)
             await this.pushFileToGoogleBucket(request)
             const client = this.getAutomlInstance(request)
             const bucket_location = `gs://${request.formParams.bucket}/${request.formParams.filename}`
@@ -234,6 +236,17 @@ export class GoogleAutomlTable extends Hub.Action {
         } catch (e) {
             log(`error creating dataset ${e}`)
             throw e
+        }
+    }
+
+    private validateFormParam(request: Hub.ActionRequest) {
+
+        if (request.formParams.dataset_name && request.formParams.dataset_name !== "" && request.formParams.dataset_name.search(dataset_name_regex) === -1) {
+            throw new Error('invalid dataset name: use only alphanumeric and underscores')
+        }
+
+        if (request.formParams.filename && request.formParams.filename !== "" && request.formParams.filename.search(file_name_regex) === -1) {
+            throw new Error('invalid file name: use alphanumeric, underscore and file extension of 3 characteres')
         }
     }
 }
