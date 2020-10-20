@@ -63,3 +63,5 @@ lib
 .idea/
 
 .DS_Store
+
+secret_env_vars.yaml

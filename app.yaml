@@ -6,14 +6,14 @@ handlers:
   secure: always
   script: auto
 
+includes:
+  - secret_env_vars.yaml
+
 env_variables:
   ACTION_HUB_LABEL: 'Google AutoMl Action Hub'
-  ACTION_HUB_SECRET: '756414f88da3390544129b09670f05c0cda4f'
-  ACTION_HUB_BASE_URL: https://asoba-241019.wl.r.appspot.com
   PORT: '8080'
-  CIPHER_MASTER: '281243e09385f19773569e4d99d306065efb0cf0f6e3ca4c705571c173722c99'
   ACTION_DEBUG: '0'
-  ACTION_WHITELIST: 'google_auto_ml_table'
+  ACTION_WHITELIST: 'google_automl_table'
 
 automatic_scaling:
   max_instances: 3
